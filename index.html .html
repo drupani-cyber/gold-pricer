@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Gold Pricer – iPad Adaptive App (v9)</title>
+  <style>
+    :root { --pad: 16px; --radius: 16px; --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    * { box-sizing: border-box; font-family: var(--font); }
+    body { margin: 0; background: #f9fafb; color: #0f172a; font-size: clamp(16px, 2vw, 18px); }
+    header { padding: var(--pad); font-weight: 800; font-size: clamp(20px, 2.2vw, 26px); background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .wrap { max-width: 1000px; margin: 0 auto; padding: var(--pad); }
+    .card { background: #fff; border-radius: var(--radius); box-shadow: 0 6px 24px rgba(0,0,0,0.08); padding: var(--pad); }
+    label { font-size: 0.9em; color: #475569; display: block; margin-bottom: 4px; }
+    input, select, button { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #d1d5db; font-size: clamp(16px, 2vw, 18px); }
+    input[type="checkbox"] { width: auto; transform: scale(1.5); margin-right: 8px; }
+    .grid { display: grid; gap: 14px; }
+    .g-2 { grid-template-columns: 1fr 1fr; }
+    .g-3 { grid-template-columns: 1fr 1fr 1fr; }
+    @media (max-width: 800px) { .g-2, .g-3 { grid-template-columns: 1fr; } body { font-size: 18px; } button { font-size: 18px; padding: 16px; } }
+    .kv { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: center; }
+    .value { font-weight: 700; text-align: right; font-size: 1.05em; }
+    .muted { color: #6b7280; font-size: 0.8em; }
+    .btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 16px; }
+    button.primary { background: #0ea5e9; color: white; border: none; }
+    button.danger { background: #fff; border: 2px solid #ef4444; color: #ef4444; }
+    button.outline { background: #fff; border: 2px solid #0ea5e9; color: #0ea5e9; }
+  </style>
+</head>
+<body>
+<header>Gold Pricer – Adaptive iPad Version</header>
+<div class="wrap">
+  <div class="card">
+    <div class="grid g-3">
+      <div><label>24K Spot Price (USD / oz)</label><input id="spot" value="4100" inputmode="decimal" oninput="recalc()"></div>
+      <div><label>Labor $/g (editable)</label><input id="labor" value="15.50" inputmode="decimal" oninput="recalc()"></div>
+      <div><label>Loss % on sold metal</label><input id="loss" value="10" inputmode="decimal" oninput="recalc()"></div>
+    </div>
+
+    <div class="grid g-3" style="margin-top:14px">
+      <div><label>Karat</label>
+        <select id="karat" onchange="recalc()">
+          <option value="">Select</option><option value="10K" selected>10K</option><option value="14K">14K</option>
+        </select>
+      </div>
+      <div><label>Finished grams</label><input id="grams" value="20" inputmode="decimal" oninput="recalc()"></div>
+      <div><label>Scrap 10K (g)</label><input id="scrap10" value="9" inputmode="decimal" oninput="recalc()"></div>
+    </div>
+
+    <div class="grid g-3" style="margin-top:14px">
+      <div><label>Scrap 14K (g)</label><input id="scrap14" value="1" inputmode="decimal" oninput="recalc()"></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:26px">
+        <input type="checkbox" id="taxable" checked onchange="recalc()"><label for="taxable" style="margin:0">Taxable (8.25%)</label>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:26px">
+        <input type="checkbox" id="autosave" checked><label for="autosave" style="margin:0">Autosave inputs</label>
+      </div>
+    </div>
+
+    <div id="warn" style="color:#ef4444;font-size:0.85em;margin-top:8px;display:none">Please select a karat and enter finished grams.</div>
+
+    <div class="kv" style="margin-top:16px">
+      <div class="muted">24K $/g</div><div id="v24" class="value">$0.00</div>
+      <div class="muted">10K sell $/g (loss)</div><div id="v10sell" class="value">$0.00</div>
+      <div class="muted">10K buy $/g</div><div id="v10buy" class="value">$0.00</div>
+      <div class="muted">Piece 10K-eq (g)</div><div id="vp10" class="value">0.000</div>
+      <div class="muted">Scrap 10K-eq (g)</div><div id="vs10" class="value">0.000</div>
+      <div class="muted">Net 10K-eq (piece − scrap)</div><div id="vnet" class="value">0.000</div>
+      <div class="muted">Metal cost to buy</div><div id="vmetal" class="value">$0.00</div>
+      <div class="muted">Credit (80% of 10K buy)</div><div id="vcredit" class="value">$0.00</div>
+      <div class="muted">Labor cost</div><div id="vlabor" class="value">$0.00</div>
+      <div class="muted">Subtotal</div><div id="vsub" class="value">$0.00</div>
+      <div class="muted">Tax 8.25%</div><div id="vtax" class="value">$0.00</div>
+      <div class="muted">TOTAL DUE</div><div id="vtotal" class="value" style="font-size:1.3em;color:#0ea5e9">$0.00</div>
+    </div>
+
+    <div class="btns">
+      <button class="outline" onclick="recalc()">Calculate</button>
+      <button class="primary" onclick="printEstimate()">Print</button>
+      <button class="danger" onclick="clearForm()">Clear</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const OZ_TO_G=31.1034768;
+const $=id=>document.getElementById(id);
+const fmt=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(isFinite(n)?n:0);
+function num(v){const s=String(v||'').replace(/,/g,'').replace(/[^0-9.\-]/g,'');const n=parseFloat(s);return isNaN(n)?0:n;}
+function piece10kEq(k,g){return k==='14K'?g*1.4:(k==='10K'?g:0);}
+function scrap10kEq(s10,s14){return s10+s14*1.4;}
+function recalc(){
+ const spot=num($('spot').value),labor=num($('labor').value),loss=num($('loss').value);
+ const k=$('karat').value,g=num($('grams').value),s10=num($('scrap10').value),s14=num($('scrap14').value);
+ const taxable=$('taxable').checked;
+ const p24=spot/OZ_TO_G,tenkSell=p24*(10/24)*(1+loss/100),tenkBuy=p24*(10/24);
+ const p10eq=piece10kEq(k,g),s10eq=scrap10kEq(s10,s14),net=p10eq-s10eq;
+ const metalCost=Math.max(0,net)*tenkSell,credit=Math.max(0,-net)*tenkBuy*0.8,laborCost=g*labor;
+ const subtotal=metalCost+laborCost-credit,tax=taxable?Math.max(0,subtotal)*0.0825:0,total=subtotal+tax;
+ $('v24').textContent=fmt(p24);$('v10sell').textContent=fmt(tenkSell);$('v10buy').textContent=fmt(tenkBuy);
+ $('vp10').textContent=p10eq.toFixed(3);$('vs10').textContent=s10eq.toFixed(3);$('vnet').textContent=net.toFixed(3);
+ $('vmetal').textContent=fmt(metalCost);$('vcredit').textContent=fmt(credit);$('vlabor').textContent=fmt(laborCost);
+ $('vsub').textContent=fmt(subtotal);$('vtax').textContent=fmt(tax);$('vtotal').textContent=fmt(total);
+ $('warn').style.display=(!k||g<=0)?'block':'none';
+ if($('autosave').checked){localStorage.setItem('gold_pricer_v9',JSON.stringify({spot,labor,loss,k,g,s10,s14,taxable}));}
+ return{spot,labor,loss,k,g,s10,s14,taxable,p24,tenkSell,tenkBuy,p10eq,s10eq,net,metalCost,credit,laborCost,subtotal,tax,total};
+}
+function clearForm(){['spot','labor','loss','grams','scrap10','scrap14'].forEach(id=>$(id).value='');$('karat').value='';$('taxable').checked=true;recalc();}
+function loadSaved(){try{const s=localStorage.getItem('gold_pricer_v9');if(!s)return;const d=JSON.parse(s);for(const[k,v]of Object.entries(d)){if($(k))$(k).value=v;}}catch(e){}}
+function printEstimate(){const s=recalc();const html=`<!doctype html><html><head><meta charset='utf-8'/><meta name='viewport' content='width=device-width,initial-scale=1'/><title>Estimate</title><style>
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:20px}
+h1{font-size:22px;margin:0 0 10px}table{width:100%;border-collapse:collapse;margin-top:10px}
+td{padding:6px 4px;border-bottom:1px solid #eee}.right{text-align:right}.total{font-weight:700;font-size:18px}.muted{color:#64748b}
+</style></head><body><h1>Custom Gold Order Estimate</h1>
+<div class='muted'>Printed: ${new Date().toLocaleString()}</div>
+<table>
+<tr><td>24K Spot (USD/oz)</td><td class='right'>${fmt(s.spot)}</td></tr>
+<tr><td>Karat</td><td class='right'>${s.k}</td></tr>
+<tr><td>Finished grams</td><td class='right'>${s.g.toFixed(3)}</td></tr>
+<tr><td>Scrap 10K</td><td class='right'>${s.s10.toFixed(3)}</td></tr>
+<tr><td>Scrap 14K</td><td class='right'>${s.s14.toFixed(3)}</td></tr>
+<tr><td>Piece 10K‑eq</td><td class='right'>${s.p10eq.toFixed(3)}</td></tr>
+<tr><td>Scrap 10K‑eq</td><td class='right'>${s.s10eq.toFixed(3)}</td></tr>
+<tr><td>Net 10K‑eq</td><td class='right'>${s.net.toFixed(3)}</td></tr>
+<tr><td>Metal cost</td><td class='right'>${fmt(s.metalCost)}</td></tr>
+<tr><td>Credit (80%)</td><td class='right'>−${fmt(s.credit)}</td></tr>
+<tr><td>Labor (${fmt(s.labor)} × ${s.g.toFixed(3)}g)</td><td class='right'>${fmt(s.laborCost)}</td></tr>
+<tr><td>Subtotal</td><td class='right'>${fmt(s.subtotal)}</td></tr>
+<tr><td>Tax ${s.taxable?'8.25%':'—'}</td><td class='right'>${fmt(s.tax)}</td></tr>
+<tr><td class='total'>TOTAL DUE</td><td class='right total'>${fmt(s.total)}</td></tr></table>
+<p class='muted'>Metal includes ${s.loss}% loss; scrap credited 80% of buy price; tax only applies if subtotal positive.</p>
+<script>window.print()<\/script></body></html>`;
+const w=window.open('','_blank');w.document.write(html);w.document.close();}
+loadSaved();recalc();
+</script>
+</body>
+</html>
