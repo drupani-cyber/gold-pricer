@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Gold Pricer – iPad Adaptive App (v14 – linked)</title>
+  <style>
+    :root { --pad: 16px; --radius: 16px; --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    * { box-sizing: border-box; font-family: var(--font); }
+    body { margin: 0; background: #f6f7fb; color: #0f172a; font-size: clamp(16px, 2vw, 18px); }
+    header { padding: var(--pad); font-weight: 800; font-size: clamp(20px, 2.2vw, 26px); background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .wrap { max-width: 1000px; margin: 0 auto; padding: var(--pad); }
+    .card { background: #fff; border-radius: var(--radius); box-shadow: 0 6px 22px rgba(0,0,0,0.08); padding: var(--pad); }
+    label { font-size: 0.9em; color: #475569; display: block; margin-bottom: 4px; }
+    input, select, button { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #d1d5db; font-size: clamp(16px, 2vw, 18px); }
+    input[type="checkbox"] { width: auto; transform: scale(1.4); margin-right: 8px; }
+    .grid { display: grid; gap: 14px; }
+    .g-3 { grid-template-columns: 1fr 1fr 1fr; }
+    @media (max-width: 800px) { .g-3 { grid-template-columns: 1fr; } body { font-size: 18px; } button { font-size: 18px; padding: 16px; } }
+    .kv { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+    .value { font-weight: 800; text-align: right; font-size: 1.08em; }
+    .muted { color: #6b7280; font-size: 0.95em; }
+    .section-title { margin-top: 10px; margin-bottom: 6px; font-weight: 800; color: #0f172a; }
+    .btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 16px; }
+    button.primary { background: #0ea5e9; color: white; border: none; }
+    button.danger { background: #fff; border: 2px solid #ef4444; color: #ef4444; }
+    button.outline { background: #fff; border: 2px solid #0ea5e9; color: #0ea5e9; }
+    .total { font-size: 1.35em; color: #0ea5e9; }
+    .row { display:flex; gap:10px; align-items:center; }
+    .pill { background:#eef2ff; color:#1e3a8a; border-radius:999px; padding:4px 10px; font-size:0.85em; }
+    .disabled { background:#f1f5f9; color:#6b7280; }
+    .alert { display:none; margin:12px 0; padding:12px 14px; border-radius:12px; font-weight:600; }
+    .alert.error { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
+    .alert.info { background:#e0f2fe; color:#075985; border:1px solid #bae6fd; }
+  </style>
+</head>
+<body>
+<header>Gold Pricer – Adaptive iPad Version</header>
+<div class="wrap">
+  <div id="alert" class="alert"></div>
+  <div class="card">
+    <div class="grid g-3">
+      <div>
+        <label>24K Spot Price (USD / oz)</label>
+        <input id="spot" value="4100" inputmode="decimal" oninput="recalc()">
+        <div class="row" style="margin-top:6px">
+          <input type="checkbox" id="autoSpot" checked onchange="toggleAutoSpot(true)">
+          <label for="autoSpot" style="margin:0">Auto spot (LBMA PM + $100)</label>
+          <span id="asInfo" class="pill" style="display:none"></span>
+        </div>
+      </div>
+      <div><label>Labor $/g (editable)</label><input id="labor" value="15.50" inputmode="decimal" oninput="recalc()"></div>
+      <div><label>Loss % on sold metal</label><input id="loss" value="10" inputmode="decimal" oninput="recalc()"></div>
+    </div>
+
+    <div class="grid g-3" style="margin-top:14px">
+      <div><label>Karat</label>
+        <select id="karat" onchange="recalc()">
+          <option value="">Select</option><option value="10K" selected>10K</option><option value="14K">14K</option>
+        </select>
+      </div>
+      <div><label>Finished grams</label><input id="grams" value="" inputmode="decimal" oninput="recalc()"></div>
+      <div><label>Scrap 10K (g)</label><input id="scrap10" value="" inputmode="decimal" oninput="recalc()"></div>
+    </div>
+
+    <div class="grid g-3" style="margin-top:14px">
+      <div><label>Scrap 14K (g)</label><input id="scrap14" value="" inputmode="decimal" oninput="recalc()"></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:26px">
+        <input type="checkbox" id="taxable" checked onchange="recalc()"><label for="taxable" style="margin:0">Taxable (8.25%)</label>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:26px">
+        <input type="checkbox" id="autosave" checked><label for="autosave" style="margin:0">Autosave inputs</label>
+      </div>
+    </div>
+
+    <div class="section-title">Totals</div>
+    <div class="kv">
+      <div class="muted">Price of gold</div><div id="vmetal" class="value">$0.00</div>
+      <div class="muted">Customer extra gold value</div><div id="vcredit" class="value">$0.00</div>
+      <div class="muted">Labor cost</div><div id="vlabor" class="value">$0.00</div>
+      <div class="muted">Subtotal</div><div id="vsub" class="value">$0.00</div>
+      <div class="muted">Tax 8.25%</div><div id="vtax" class="value">$0.00</div>
+      <div class="muted">TOTAL DUE</div><div id="vtotal" class="value total">$0.00</div>
+    </div>
+
+    <div class="btns">
+      <button class="outline" onclick="recalc()">Calculate</button>
+      <button class="primary" onclick="printEstimate()">Print</button>
+      <button class="danger" onclick="clearForm()">Clear</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const LBMA_PROXY_URL = "https://script.google.com/macros/s/AKfycbxHeYXbe1eIG-_TtlxHTuz4tlaEtqHlhX26bdCcW-vt1UMSZ31lfC3cqPdHv5UEwg2Q/exec";
+
+const OZ_TO_G=31.1034768;
+const $=id=>document.getElementById(id);
+const fmt=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(isFinite(n)?n:0);
+function num(v){const s=String(v||'').replace(/,/g,'').replace(/[^0-9.\-]/g,'');const n=parseFloat(s);return isNaN(n)?0:n;}
+
+function piece10kEq(k,g){return k==='14K'?g*1.4:(k==='10K'?g:0);}
+function scrap10kEq(s10,s14){const eff10=s10*0.9, eff14=s14*0.9; return eff10 + eff14*1.4;}
+
+function showAlert(msg, kind='error'){ const el=$('alert'); el.textContent=msg; el.className='alert '+kind; el.style.display='block'; }
+function clearAlert(){ const el=$('alert'); el.style.display='none'; el.textContent=''; el.className='alert'; }
+
+function cacheKey(){const d=new Date(); return 'lbma_cache_'+d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+
+async function toggleAutoSpot(fromUser=false){
+  const cb = $('autoSpot');
+  const input = $('spot');
+  const info = $('asInfo');
+
+  if(cb.checked){
+    input.readOnly = true; input.classList.add('disabled');
+    clearAlert();
+
+    if(!LBMA_PROXY_URL || LBMA_PROXY_URL.includes('PASTE_YOUR_APPS_SCRIPT_URL_HERE')){
+      fallback('Auto spot not configured. Enter spot manually.');
+      return;
+    }
+
+    try{
+      const key=cacheKey();
+      const cached = JSON.parse(localStorage.getItem(key) || 'null');
+      if(cached && typeof cached.price==='number'){
+        input.value = Number(cached.price).toFixed(2);
+        info.style.display='inline-block';
+        info.textContent = `LBMA PM ${Number(cached.pm).toFixed(2)} + $100 on ${cached.date||''}`;
+        recalc();
+        return;
+      }
+    }catch(e){}
+
+    info.style.display='inline-block'; info.textContent='Fetching…';
+    try{
+      const r = await fetch(LBMA_PROXY_URL, {cache:'no-cache'});
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const j = await r.json();
+      if(typeof j.price==='number'){
+        input.value = Number(j.price).toFixed(2);
+        info.textContent = `LBMA PM ${Number(j.pm).toFixed(2)} + $100 on ${j.date||''}`;
+        localStorage.setItem(cacheKey(), JSON.stringify(j));
+        recalc();
+      }else{
+        fallback('Auto spot failed (no price). Using manual spot.');
+      }
+    }catch(e){
+      fallback('Auto spot fetch failed. Using manual spot.');
+    }
+  }else{
+    manualMode();
+  }
+
+  function manualMode(){
+    input.readOnly = false; input.classList.remove('disabled');
+    info.style.display='none';
+  }
+  function fallback(message){
+    manualMode();
+    cb.checked = false;
+    showAlert(message, 'error');
+  }
+}
+
+function recalc(){
+ const spot=num($('spot').value),labor=num($('labor').value),loss=num($('loss').value);
+ const k=$('karat').value,g=num($('grams').value),s10=num($('scrap10').value),s14=num($('scrap14').value);
+ const taxable=$('taxable').checked;
+
+ const p24=spot/OZ_TO_G;
+ const tenkSell=p24*(10/24)*(1+loss/100);
+ const tenkBuy=p24*(10/24);
+
+ const p10eq=piece10kEq(k,g);
+ const s10eq=scrap10kEq(s10,s14);
+ const net=p10eq-s10eq;
+
+ const metalCost=Math.max(0,net)*tenkSell;
+ const credit=Math.max(0,-net)*tenkBuy*0.8;
+ const laborCost=g*labor;
+
+ const subtotal=metalCost+laborCost-credit;
+ const tax=taxable?Math.max(0,subtotal)*0.0825:0;
+ const total=subtotal+tax;
+
+ $('vmetal').textContent=fmt(metalCost);
+ $('vcredit').textContent=fmt(credit);
+ $('vlabor').textContent=fmt(laborCost);
+ $('vsub').textContent=fmt(subtotal);
+ $('vtax').textContent=fmt(tax);
+ $('vtotal').textContent=fmt(total);
+
+ if($('autosave').checked){
+   localStorage.setItem('gold_pricer_v14',JSON.stringify({auto:$('autoSpot').checked,spot,labor,loss,k,g,s10,s14,taxable}));
+ }
+ return {spot,labor,loss,k,g,s10,s14,taxable,metalCost,credit,laborCost,subtotal,tax,total};
+}
+
+function clearForm(){['spot','labor','loss','grams','scrap10','scrap14'].forEach(id=>$(id).value='');$('karat').value='';$('taxable').checked=true;recalc();}
+function loadSaved(){
+  try{
+    const s=localStorage.getItem('gold_pricer_v14');if(!s) return;
+    const d=JSON.parse(s);
+    if(d){ for(const[k,v] of Object.entries(d)){ if($(k)) $(k).value=v; } $('autoSpot').checked = !!d.auto; }
+  }catch(e){}
+}
+
+function printEstimate(){
+ const s=recalc();
+ const html=`<!doctype html><html><head><meta charset='utf-8'/><meta name='viewport' content='width=device-width,initial-scale=1'/><title>Estimate</title><style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:24px;color:#0f172a}
+  h1{font-size:24px;margin:0 0 4px}
+  .muted{color:#64748b}
+  table{width:100%;border-collapse:collapse;margin-top:12px}
+  td{padding:8px 4px;border-bottom:1px solid #eceff4}
+  .right{text-align:right}
+  .total{font-weight:800;font-size:18px}
+  .header{display:flex;justify-content:space-between;align-items:flex-end}
+ </style></head><body>
+  <div class='header'>
+    <div>
+      <h1>Gold Treasure</h1>
+      <div>(956)401-4010</div>
+    </div>
+    <div class='muted'>Printed: ${new Date().toLocaleString()}</div>
+  </div>
+
+  <table>
+    <tr><td>24K Spot (USD/oz)</td><td class='right'>${fmt(s.spot)}</td></tr>
+    <tr><td>Karat</td><td class='right'>${$('karat').value}</td></tr>
+    <tr><td>Finished grams</td><td class='right'>${num($('grams').value).toFixed(3)}</td></tr>
+    <tr><td>Scrap 10K (g) entered</td><td class='right'>${num($('scrap10').value).toFixed(3)}</td></tr>
+    <tr><td>Scrap 14K (g) entered</td><td class='right'>${num($('scrap14').value).toFixed(3)}</td></tr>
+    <tr><td>Price of gold</td><td class='right'>${fmt(s.metalCost)}</td></tr>
+    <tr><td>Customer extra gold value</td><td class='right'>−${fmt(s.credit)}</td></tr>
+    <tr><td>Labor (${fmt(num($('labor').value))} × ${num($('grams').value).toFixed(3)}g)</td><td class='right'>${fmt(s.laborCost)}</td></tr>
+    <tr><td>Subtotal</td><td class='right'>${fmt(s.subtotal)}</td></tr>
+    <tr><td>Tax ${$('taxable').checked?'8.25%':'—'}</td><td class='right'>${fmt(s.tax)}</td></tr>
+    <tr><td class='total'>TOTAL DUE</td><td class='right total'>${fmt(s.total)}</td></tr>
+  </table>
+
+  <p style="margin-top:18px">Rate good for 1 week only</p>
+  <p style="margin-top:36px">Customer signature ______________________________</p>
+
+  <script>window.print()<\/script>
+ </body></html>`;
+ const w=window.open('','_blank'); w.document.write(html); w.document.close();
+}
+
+loadSaved();
+toggleAutoSpot();
+recalc();
+</script>
+</body>
+</html>
