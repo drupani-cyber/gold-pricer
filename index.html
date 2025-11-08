@@ -60,10 +60,6 @@
       box-shadow: 0 18px 45px rgba(15,23,42,0.12);
     }
 
-    h1 {
-      margin: 0 0 10px;
-    }
-
     .section-title {
       margin-top: 26px;
       margin-bottom: 8px;
@@ -109,7 +105,7 @@
     }
 
     .guard {
-      border: 2px solid var(--red);
+      border: 3px solid var(--red);
       border-radius: 18px;
       padding: 14px 14px 18px;
       margin-top: 18px;
@@ -123,7 +119,7 @@
       background: #fff;
       padding: 0 8px;
       color: var(--red);
-      font-weight: 700;
+      font-weight: 800;
       font-size: .8rem;
     }
 
@@ -144,14 +140,6 @@
     .pill.err {
       background: #fee2e2;
       color: #b91c1c;
-    }
-
-    .totals {
-      margin-top: 12px;
-      padding: 12px;
-      border-radius: 14px;
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
     }
 
     .kv {
@@ -260,11 +248,8 @@
     <div class="grid g-3">
       <div>
         <label for="spot">24K Spot Price (USD / oz)</label>
-        <div class="row">
-          <input id="spot" type="number" step="0.01" value="4100" readonly>
-          <button type="button" class="outline small" id="btnUnlockSpot">Unlock</button>
-        </div>
-        <div class="muted" style="margin-top:4px;">Staff, do not change. Manager unlocks and sets once per day.</div>
+        <input id="spot" type="number" step="0.01" value="4100">
+        <div class="muted" style="margin-top:4px;">Set once per day as needed.</div>
       </div>
       <div>
         <label for="labor">Labor $/g (editable)</label>
@@ -274,14 +259,6 @@
         <label for="loss">Loss % on sold metal</label>
         <input id="loss" type="number" step="0.1" value="10">
       </div>
-    </div>
-
-    <div class="row" style="margin-top:10px;">
-      <label class="checkbox-line" style="margin-top:0;">
-        <input type="checkbox" id="autoSpot">
-        <span>Auto spot (LBMA PM + $100)</span>
-      </label>
-      <span id="autoStatus" class="pill err" style="display:none;">Auto failed</span>
     </div>
 
     <!-- RED BOX: STAFF INPUT AREA -->
@@ -425,39 +402,29 @@
 </div>
 
 <script>
-  // === CONFIG: your Apps Script proxy URL ===
-  const LBMA_PROXY_URL =
-    "https://script.google.com/macros/s/AKfycbw4VVdNm2hTMPa4-zDEh2LY73_fTTbINHOg3GuggbqT-1VDpj5wF97TRq1pNyW1MTfi/exec";
-
-  const ozToGram = 31.1035;
-  const purity10 = 10 / 24;
-  const purity14 = 14 / 24;
+  const OZ_TO_GRAM = 31.1035;
+  const PURITY_10 = 10 / 24;
+  const PURITY_14 = 14 / 24;
   const TAX_RATE = 0.0825;
-  const ADMIN_PASSWORD = "1234"; // change this to your secret
 
   const el = id => document.getElementById(id);
 
-  const spotEl   = el("spot");
-  const laborEl  = el("labor");
-  const lossEl   = el("loss");
-  const karatEl  = el("karat");
-  const weightEl = el("weight");
-  const scrap10El= el("scrap10");
-  const scrap14El= el("scrap14");
-  const taxableEl= el("taxable");
-  const autosaveEl=el("autosave");
-  const autoSpotEl=el("autoSpot");
-  const autoStatusEl=el("autoStatus");
-  const screenMetaEl = el("screenMeta");
-  const pDateEl = el("pDate");
-  const unlockBtnEl = el("btnUnlockSpot");
+  const spotEl     = el("spot");
+  const laborEl    = el("labor");
+  const lossEl     = el("loss");
+  const karatEl    = el("karat");
+  const weightEl   = el("weight");
+  const scrap10El  = el("scrap10");
+  const scrap14El  = el("scrap14");
+  const taxableEl  = el("taxable");
+  const autosaveEl = el("autosave");
 
-  const priceGoldEl = el("priceGold");
+  const priceGoldEl  = el("priceGold");
   const extraValueEl = el("extraValue");
-  const laborCostEl = el("laborCost");
-  const subtotalEl  = el("subtotal");
-  const taxEl       = el("tax");
-  const totalEl     = el("total");
+  const laborCostEl  = el("laborCost");
+  const subtotalEl   = el("subtotal");
+  const taxEl        = el("tax");
+  const totalEl      = el("total");
 
   const pFinalWeightEl = el("pFinalWeight");
   const pFinalKaratEl  = el("pFinalKarat");
@@ -469,6 +436,8 @@
   const pSubtotalEl    = el("pSubtotal");
   const pTaxEl         = el("pTax");
   const pTotalEl       = el("pTotal");
+  const pDateEl        = el("pDate");
+  const screenMetaEl   = el("screenMeta");
 
   function num(v) {
     const n = parseFloat(v);
@@ -476,7 +445,9 @@
   }
 
   function fmtMoney(x) {
-    return "$" + x.toFixed(2);
+    const sign = x < 0 ? "-" : "";
+    const val = Math.abs(x).toFixed(2);
+    return sign + "$" + val;
   }
 
   function saveState() {
@@ -512,7 +483,6 @@
     } catch (e) {}
   }
 
-  // Update date + validity info on screen and print
   function updateDateMeta() {
     const now = new Date();
     const opts = { year: "numeric", month: "long", day: "numeric" };
@@ -525,133 +495,109 @@
   }
 
   function recalc() {
-    const spot = num(spotEl.value);     // USD / oz
-    const laborRate = num(laborEl.value);
-    const lossPct = num(lossEl.value);
-    const karat = karatEl.value;
-    const weight = num(weightEl.value);
-    const scrap10 = num(scrap10El.value);
-    const scrap14 = num(scrap14El.value);
-    const taxable = taxableEl.checked;
+    const spot      = num(spotEl.value);      // 24K USD / oz
+    const laborRate = num(laborEl.value);     // $ per gram
+    const lossPct   = num(lossEl.value);      // %
+    const karat     = karatEl.value;
+    const weight    = Math.max(num(weightEl.value), 0);
+    const scrap10   = Math.max(num(scrap10El.value), 0);
+    const scrap14   = Math.max(num(scrap14El.value), 0);
+    const taxable   = taxableEl.checked;
 
-    const purity = karat === "10K" ? purity10 : purity14;
+    // 24k $/g
+    const price24_g = spot / OZ_TO_GRAM;
 
-    const baseSellPerGram = (spot * purity) / ozToGram;
-    const sellPerGram = baseSellPerGram * (1 + lossPct / 100);
-    const buyPerGram  = baseSellPerGram * 0.8;
+    // purity of finished piece
+    const purityPiece = (karat === "14K") ? PURITY_14 : PURITY_10;
 
-    const piece10kEq = weight * purity;
+    // pure gold needed in piece (grams of fine gold)
+    const pureNeeded = weight * purityPiece;
+
+    // scrap: apply 10% loss on weight, then convert to pure
     const scrap10Adj = scrap10 * 0.9;
     const scrap14Adj = scrap14 * 0.9;
-    const scrap10kEq = scrap10Adj * purity10 + scrap14Adj * purity14;
 
-    const net10kEq = piece10kEq - scrap10kEq;
-    const priceOfGold = net10kEq * sellPerGram;
-    const extraGoldValue = scrap10kEq * buyPerGram;
+    const pureFromScrap =
+      scrap10Adj * PURITY_10 +
+      scrap14Adj * PURITY_14;
 
-    let _priceOfGold = priceOfGold;
-    let _extraGoldValue = extraGoldValue;
-    if (_priceOfGold < 0) _priceOfGold = 0;
-    if (_extraGoldValue < 0) _extraGoldValue = 0;
+    // net pure gold required
+    const netPure = pureNeeded - pureFromScrap;
 
-    const laborCost = weight * laborRate;
+    const pureNew    = Math.max(netPure, 0);   // we must supply this
+    const extraPure  = Math.max(-netPure, 0);  // extra scrap we buy from customer
 
-    let subtotal = _priceOfGold - _extraGoldValue + laborCost;
-    if (subtotal < 0) subtotal = 0;
+    // price per gram of pure gold when SELLING new metal (we add loss %)
+    const pureSellRate      = price24_g * (1 + lossPct / 100);
+    // price per gram of pure gold when BUYING extra scrap (80% of value)
+    const pureBuyExtraRate  = price24_g * 0.8;
 
-    const tax = taxable ? subtotal * TAX_RATE : 0;
-    const total = subtotal + tax;
+    // gold cost to customer (only on pureNew)
+    const goldCost      = pureNew   * pureSellRate;
+    // credit we owe the customer for extra scrap
+    const extraCredit   = extraPure * pureBuyExtraRate;
+
+    // labor charged on finished weight
+    const laborCost     = weight * laborRate;
+
+    // subtotal BEFORE tax – can be negative (we owe customer)
+    let subtotalBeforeTax = goldCost + laborCost - extraCredit;
+
+    // tax only on positive sale amount
+    let tax = 0;
+    if (taxable && subtotalBeforeTax > 0) {
+      tax = subtotalBeforeTax * TAX_RATE;
+    }
+    const total = subtotalBeforeTax + tax;
 
     // Screen totals
-    priceGoldEl.textContent = fmtMoney(_priceOfGold);
-    extraValueEl.textContent = fmtMoney(_extraGoldValue);
-    laborCostEl.textContent = fmtMoney(laborCost);
-    subtotalEl.textContent = fmtMoney(subtotal);
-    taxEl.textContent = fmtMoney(tax);
-    totalEl.textContent = fmtMoney(total);
+    priceGoldEl.textContent  = fmtMoney(goldCost);
+    extraValueEl.textContent = fmtMoney(extraCredit);
+    laborCostEl.textContent  = fmtMoney(laborCost);
+    subtotalEl.textContent   = fmtMoney(subtotalBeforeTax);
+    taxEl.textContent        = fmtMoney(tax);
+    totalEl.textContent      = fmtMoney(total);
 
     // Print layout values
     pFinalWeightEl.textContent = weight.toFixed(3);
-    pFinalKaratEl.textContent = karat;
-    pScrap10El.textContent = scrap10.toFixed(3);
-    pScrap14El.textContent = scrap14.toFixed(3);
-    pPriceGoldEl.textContent = fmtMoney(_priceOfGold);
-    pExtraValueEl.textContent = fmtMoney(_extraGoldValue);
-    pLaborCostEl.textContent = fmtMoney(laborCost);
-    pSubtotalEl.textContent = fmtMoney(subtotal);
-    pTaxEl.textContent = fmtMoney(tax);
-    pTotalEl.textContent = fmtMoney(total);
+    pFinalKaratEl.textContent  = karat;
+    pScrap10El.textContent     = scrap10.toFixed(3);
+    pScrap14El.textContent     = scrap14.toFixed(3);
+    pPriceGoldEl.textContent   = fmtMoney(goldCost);
+    pExtraValueEl.textContent  = fmtMoney(extraCredit);
+    pLaborCostEl.textContent   = fmtMoney(laborCost);
+    pSubtotalEl.textContent    = fmtMoney(subtotalBeforeTax);
+    pTaxEl.textContent         = fmtMoney(tax);
+    pTotalEl.textContent       = fmtMoney(total);
 
     saveState();
   }
 
-  async function runAutoSpot() {
-    if (!autoSpotEl.checked) {
-      autoStatusEl.style.display = "none";
-      return;
-    }
-    autoStatusEl.textContent = "Loading…";
-    autoStatusEl.className = "pill";
-    autoStatusEl.style.display = "inline-flex";
-
-    try {
-      const resp = await fetch(LBMA_PROXY_URL, { cache: "no-cache" });
-      const data = await resp.json();
-      if (!resp.ok || data.error || typeof data.price !== "number") {
-        throw new Error(data && data.error ? data.error : "Unknown error");
-      }
-      spotEl.value = data.price.toFixed(2);
-      autoStatusEl.textContent = "Auto spot updated";
-      autoStatusEl.className = "pill ok";
-      recalc();
-    } catch (e) {
-      autoStatusEl.textContent = "Auto failed";
-      autoStatusEl.className = "pill err";
-    }
-  }
-
   function doPrint() {
-    // Values already copied into #printLayout by recalc()
     window.print();
   }
 
-  // PDF: rely on print → "Save as PDF"
   function doPdf() {
-    doPrint();
+    doPrint(); // use browser "Save as PDF"
   }
 
   function clearAll() {
-    weightEl.value = "";
+    weightEl.value  = "";
     scrap10El.value = "";
     scrap14El.value = "";
-    karatEl.value = "10K";
+    karatEl.value   = "10K";
     taxableEl.checked = true;
     recalc();
   }
 
   // EVENT WIRES
-  el("btnCalc").addEventListener("click", recalc);
-  el("btnClear").addEventListener("click", clearAll);
-  el("btnPrint").addEventListener("click", doPrint);
-  el("btnPdf").addEventListener("click", doPdf);
-  autoSpotEl.addEventListener("change", runAutoSpot);
+  document.getElementById("btnCalc").addEventListener("click", recalc);
+  document.getElementById("btnClear").addEventListener("click", clearAll);
+  document.getElementById("btnPrint").addEventListener("click", doPrint);
+  document.getElementById("btnPdf").addEventListener("click", doPdf);
 
-  // Recalculate when inputs change (nice live updates)
   [spotEl, laborEl, lossEl, karatEl, weightEl, scrap10El, scrap14El, taxableEl]
     .forEach(input => input.addEventListener("change", recalc));
-
-  // Password protect spot price editing
-  if (unlockBtnEl) {
-    unlockBtnEl.addEventListener("click", () => {
-      const pw = prompt("Manager: enter password to edit gold price:");
-      if (pw === ADMIN_PASSWORD) {
-        spotEl.readOnly = false;
-        spotEl.focus();
-      } else if (pw !== null) {
-        alert("Incorrect password.");
-      }
-    });
-  }
 
   // INIT
   loadState();
@@ -660,3 +606,4 @@
 </script>
 </body>
 </html>
+Fix 10K formula and remove unlock
