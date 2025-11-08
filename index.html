@@ -14,67 +14,88 @@
       --red: #ef4444;
       --bg: #f6f7fb;
     }
-    * { box-sizing: border-box; font-family: var(--font); }
+
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
+      font-family: var(--font);
       background: var(--bg);
       color: #0f172a;
-      font-size: clamp(16px, 2vw, 18px);
     }
 
     header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
       position: sticky;
       top: 0;
-      z-index: 10;
-      padding: 10px var(--pad);
-      background: #fff;
-      box-shadow: 0 2px 8px rgba(0,0,0,.06);
-      display: flex;
-      align-items: center;
-      gap: 12px;
+      z-index: 20;
     }
-    .title {
-      font-weight: 800;
-      font-size: clamp(18px, 2.2vw, 24px);
-      flex: 1;
+
+    header .title {
+      font-weight: 700;
+      font-size: 1.25rem;
     }
-    .logo-small {
-      width: 90px;
-      max-height: 70px;
+
+    header img.logo-small {
+      height: 60px;
+      width: auto;
       object-fit: contain;
-      opacity: .95;
     }
 
     .wrap {
-      max-width: 1000px;
-      margin: 0 auto;
-      padding: var(--pad);
+      max-width: 900px;
+      margin: 20px auto 40px;
+      padding: 0 10px;
     }
+
     .card {
-      background: #fff;
-      border-radius: 18px;
-      box-shadow: 0 6px 22px rgba(0,0,0,.08);
-      padding: var(--pad);
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 22px 20px 26px;
+      box-shadow: 0 18px 45px rgba(15,23,42,0.12);
+    }
+
+    h1 {
+      margin: 0 0 10px;
+    }
+
+    .section-title {
+      margin-top: 26px;
+      margin-bottom: 8px;
+      font-weight: 600;
+      font-size: 1.05rem;
     }
 
     label {
-      font-size: .9em;
-      color: #475569;
+      font-size: .9rem;
+      font-weight: 500;
       display: block;
       margin-bottom: 4px;
     }
-    input, select, button {
+
+    input[type="number"], select {
       width: 100%;
-      padding: 12px 13px;
-      border-radius: 12px;
+      padding: 10px 12px;
+      border-radius: 10px;
       border: 1px solid #d1d5db;
-      font-size: clamp(16px, 2vw, 18px);
+      font-size: 1rem;
+      font-family: var(--font);
     }
-    input[type="checkbox"] {
-      width: auto;
-      transform: scale(1.2);
-      margin-right: 8px;
+
+    input[type="number"]:focus, select:focus {
+      outline: 2px solid var(--blue);
+      border-color: var(--blue);
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .grid {
@@ -87,11 +108,23 @@
       .g-3, .g-2 { grid-template-columns: 1fr; }
     }
 
-    .row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
+    .guard {
+      border: 2px solid var(--red);
+      border-radius: 18px;
+      padding: 14px 14px 18px;
+      margin-top: 18px;
+      position: relative;
+    }
+    .guard::before {
+      content: "Fill only inside the red box";
+      position: absolute;
+      top: -10px;
+      left: 18px;
+      background: #fff;
+      padding: 0 8px;
+      color: var(--red);
+      font-weight: 700;
+      font-size: .8rem;
     }
 
     .pill {
@@ -99,63 +132,46 @@
       align-items: center;
       padding: 4px 10px;
       border-radius: 999px;
-      font-size: .85em;
-      font-weight: 700;
-      border: 1px solid transparent;
-    }
-    .pill.err {
+      font-size: .8rem;
+      font-weight: 500;
       background: #fee2e2;
-      border-color: #fecaca;
-      color: #991b1b;
+      color: #b91c1c;
     }
     .pill.ok {
       background: #dcfce7;
-      border-color: #bbf7d0;
       color: #166534;
     }
-
-    .guard {
-      border: 3px solid var(--red);
-      border-radius: 18px;
-      padding: 14px;
-      margin-top: 16px;
-      position: relative;
-    }
-    .guard::before {
-      content: "Fill only inside the red box";
-      position: absolute;
-      top: -12px;
-      left: 16px;
-      background: #fff;
-      padding: 0 8px;
-      color: #991b1b;
-      font-weight: 800;
-      font-size: 12px;
+    .pill.err {
+      background: #fee2e2;
+      color: #b91c1c;
     }
 
-    .section-title {
-      margin-top: 16px;
-      margin-bottom: 8px;
-      font-weight: 800;
+    .totals {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 14px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
     }
 
     .kv {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 6px;
-      align-items: center;
+      display: flex;
+      justify-content: space-between;
+      margin: 4px 0;
     }
+
     .kv .label {
-      font-size: .9em;
-      color: #475569;
+      font-size: .9rem;
+      color: #4b5563;
     }
+
     .kv .value {
-      font-weight: 800;
-      text-align: right;
-      font-size: 1.05em;
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
     }
-    .total {
-      font-size: 1.35em;
+
+    .kv .value.total {
+      font-size: 1.25rem;
       color: var(--blue);
     }
 
@@ -165,9 +181,20 @@
       gap: 12px;
       margin-top: 20px;
     }
+    button {
+      padding: 12px;
+      border-radius: 999px;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font);
+    }
+
     button.primary   { background: var(--blue); color: #fff; border: none; }
     button.outline   { background: #fff; border: 2px solid var(--blue); color: var(--blue); }
     button.danger    { background: #fff; border: 2px solid var(--red); color: var(--red); }
+    button.small     { padding: 6px 10px; font-size: .8rem; border-radius: 999px; }
 
     .checkbox-line {
       display: flex;
@@ -191,12 +218,6 @@
       margin: 6px 0 2px;
       text-align: center;
     }
-    #printLayout .muted {
-      color: #64748b;
-      text-align: center;
-      margin: 0 0 10px;
-      font-size: 13px;
-    }
     #printLayout table {
       width: 100%;
       border-collapse: collapse;
@@ -204,17 +225,24 @@
       font-size: 14px;
     }
     #printLayout td {
-      padding: 6px 4px;
-      border-bottom: 1px solid #e5e7eb;
+      padding: 4px 0;
     }
-    #printLayout .right { text-align: right; }
-    #printLayout .total { font-weight: 800; font-size: 17px; }
+    #printLayout td.right {
+      text-align: right;
+    }
+    #printLayout .total {
+      font-weight: 700;
+      font-size: 16px;
+    }
 
+    /* Hide main app when printing, show print layout */
     @media print {
-      @page { size: A4 portrait; margin: 16mm; }
-      header, .card, .btns, .wrap > :not(#printLayout) { display: none !important; }
-      body { background: #fff; }
+      header { display: none; }
+      .wrap { margin: 0; padding: 0; }
+      .card { box-shadow: none; border-radius: 0; padding: 0; }
+      #app { display: none; }
       #printLayout { display: block !important; }
+      body { background: #fff; }
     }
   </style>
 </head>
@@ -226,17 +254,17 @@
   </a>
 </header>
 
-  </a>
-</header>
-
-
 <div class="wrap">
-  <div class="card">
+  <div class="card" id="app">
     <!-- TOP CONTROLS -->
     <div class="grid g-3">
       <div>
         <label for="spot">24K Spot Price (USD / oz)</label>
-        <input id="spot" type="number" step="0.01" value="4100">
+        <div class="row">
+          <input id="spot" type="number" step="0.01" value="4100" readonly>
+          <button type="button" class="outline small" id="btnUnlockSpot">Unlock</button>
+        </div>
+        <div class="muted" style="margin-top:4px;">Staff, do not change. Manager unlocks and sets once per day.</div>
       </div>
       <div>
         <label for="labor">Labor $/g (editable)</label>
@@ -278,17 +306,18 @@
           <label for="scrap14">Scrap given by customer 14K (g)</label>
           <input id="scrap14" type="number" step="0.01" value="">
         </div>
-      </div>
-
-      <div class="grid g-2" style="margin-top:10px;">
-        <label class="checkbox-line">
-          <input type="checkbox" id="taxable" checked>
-          <span>Taxable (8.25%)</span>
-        </label>
-        <label class="checkbox-line" style="justify-content:flex-end;">
-          <input type="checkbox" id="autosave" checked>
-          <span>Autosave inputs</span>
-        </label>
+        <div>
+          <label class="checkbox-line">
+            <input type="checkbox" id="taxable" checked>
+            <span>Taxable (8.25%)</span>
+          </label>
+        </div>
+        <div>
+          <label class="checkbox-line">
+            <input type="checkbox" id="autosave" checked>
+            <span>Autosave inputs</span>
+          </label>
+        </div>
       </div>
     </div>
 
@@ -321,6 +350,9 @@
       </div>
     </div>
 
+    <!-- small info line under totals, on screen only -->
+    <p class="muted" id="screenMeta" style="margin-top:6px;text-align:center;"></p>
+
     <!-- BUTTONS -->
     <div class="btns">
       <button class="primary" id="btnCalc">Calculate</button>
@@ -332,30 +364,27 @@
 
   <!-- PRINT-ONLY LAYOUT -->
   <div id="printLayout">
-  <div style="text-align:center;">
-    <a href="https://www.thegoldtreasure.com">
-      <img class="logo" src="GoldTreasureLogo.jpg" alt="Gold Treasure Logo">
-
-    </a>
-    <h1>Gold Treasure Custom Gold Estimate</h1>
-    <p style="margin-top: -10px; font-size: 14px; font-weight: 500;">
-      <script>
-        document.write("<strong>Date:</strong> " + new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
-      </script><br>
-      <strong>Quote valid for:</strong> 7 days<br>
-      <strong>Visit us at:</strong> <a href="https://www.thegoldtreasure.com" target="_blank">www.thegoldtreasure.com</a>
-    </p>
-
-    ...
-
-      <p class="muted">Gold Treasure &middot; (956)401-4010 &middot; Rate good for 1 week only</p>
+    <div style="text-align:center;">
+      <a href="https://www.thegoldtreasure.com">
+        <img class="logo" src="GoldTreasureLogo.jpg" alt="Gold Treasure Logo">
+      </a>
+      <h1>Gold Treasure Custom Gold Estimate</h1>
+      <p style="margin:6px 0 4px;font-size:14px;text-align:center;">
+        <strong>(956) 401-4010</strong><br>
+        <strong>Date:</strong> <span id="pDate"></span><br>
+        <strong>Quote valid for:</strong> 7 days<br>
+        <strong>Visit us at:</strong> www.thegoldtreasure.com
+      </p>
     </div>
 
     <table>
       <tbody>
         <tr>
           <td>Final weight</td>
-          <td class="right"><span id="pFinalWeight">0.00</span> g <span id="pFinalKarat">10K</span></td>
+          <td class="right">
+            <span id="pFinalWeight">0.00</span> g
+            <span id="pFinalKarat">10K</span>
+          </td>
         </tr>
         <tr>
           <td>Scrap gold given by customer</td>
@@ -404,6 +433,7 @@
   const purity10 = 10 / 24;
   const purity14 = 14 / 24;
   const TAX_RATE = 0.0825;
+  const ADMIN_PASSWORD = "1234"; // change this to your secret
 
   const el = id => document.getElementById(id);
 
@@ -418,29 +448,31 @@
   const autosaveEl=el("autosave");
   const autoSpotEl=el("autoSpot");
   const autoStatusEl=el("autoStatus");
+  const screenMetaEl = el("screenMeta");
+  const pDateEl = el("pDate");
+  const unlockBtnEl = el("btnUnlockSpot");
 
   const priceGoldEl = el("priceGold");
   const extraValueEl = el("extraValue");
   const laborCostEl = el("laborCost");
-  const subtotalEl = el("subtotal");
-  const taxEl = el("tax");
-  const totalEl = el("total");
+  const subtotalEl  = el("subtotal");
+  const taxEl       = el("tax");
+  const totalEl     = el("total");
 
-  // Print elements
-  const pFinalWeight = el("pFinalWeight");
-  const pFinalKarat  = el("pFinalKarat");
-  const pScrap10     = el("pScrap10");
-  const pScrap14     = el("pScrap14");
-  const pPriceGold   = el("pPriceGold");
-  const pExtraValue  = el("pExtraValue");
-  const pLaborCost   = el("pLaborCost");
-  const pSubtotal    = el("pSubtotal");
-  const pTax         = el("pTax");
-  const pTotal       = el("pTotal");
+  const pFinalWeightEl = el("pFinalWeight");
+  const pFinalKaratEl  = el("pFinalKarat");
+  const pScrap10El     = el("pScrap10");
+  const pScrap14El     = el("pScrap14");
+  const pPriceGoldEl   = el("pPriceGold");
+  const pExtraValueEl  = el("pExtraValue");
+  const pLaborCostEl   = el("pLaborCost");
+  const pSubtotalEl    = el("pSubtotal");
+  const pTaxEl         = el("pTax");
+  const pTotalEl       = el("pTotal");
 
   function num(v) {
     const n = parseFloat(v);
-    return isFinite(n) ? n : 0;
+    return isNaN(n) ? 0 : n;
   }
 
   function fmtMoney(x) {
@@ -480,6 +512,18 @@
     } catch (e) {}
   }
 
+  // Update date + validity info on screen and print
+  function updateDateMeta() {
+    const now = new Date();
+    const opts = { year: "numeric", month: "long", day: "numeric" };
+    const dateStr = now.toLocaleDateString("en-US", opts);
+    if (pDateEl) pDateEl.textContent = dateStr;
+    if (screenMetaEl) {
+      screenMetaEl.textContent =
+        "Date: " + dateStr + " · Quote valid for 7 days · Visit us at www.thegoldtreasure.com";
+    }
+  }
+
   function recalc() {
     const spot = num(spotEl.value);     // USD / oz
     const laborRate = num(laborEl.value);
@@ -490,65 +534,53 @@
     const scrap14 = num(scrap14El.value);
     const taxable = taxableEl.checked;
 
-    // 24k $/g
-    const price24_g = spot / ozToGram;
+    const purity = karat === "10K" ? purity10 : purity14;
 
-    // 10K base & sell/buy prices
-    const base10_g = price24_g * purity10;
-    const sell10_g = base10_g * (1 + lossPct / 100); // selling to customer
-    const buy10_g  = base10_g * 0.8;                 // buying extra from customer
+    const baseSellPerGram = (spot * purity) / ozToGram;
+    const sellPerGram = baseSellPerGram * (1 + lossPct / 100);
+    const buyPerGram  = baseSellPerGram * 0.8;
 
-    // Piece equivalent in 10K grams
-    let piece10eq;
-    if (karat === "10K") {
-      piece10eq = weight;
-    } else { // 14K piece
-      piece10eq = weight * (purity14 / purity10); // convert by pure gold
-    }
-
-    // Scrap: apply 10% weight loss first
+    const piece10kEq = weight * purity;
     const scrap10Adj = scrap10 * 0.9;
     const scrap14Adj = scrap14 * 0.9;
+    const scrap10kEq = scrap10Adj * purity10 + scrap14Adj * purity14;
 
-    let scrap10eq = scrap10Adj + scrap14Adj * (purity14 / purity10);
+    const net10kEq = piece10kEq - scrap10kEq;
+    const priceOfGold = net10kEq * sellPerGram;
+    const extraGoldValue = scrap10kEq * buyPerGram;
 
-    // Net metal needed in 10K-equivalent grams
-    const net10eq = piece10eq - scrap10eq;
-    const need10eq = Math.max(0, net10eq);
-    const extra10eq = net10eq < 0 ? -net10eq : 0;
-
-    let priceOfGold = need10eq * sell10_g;
-    let extraGoldValue = extra10eq * buy10_g;
-    if (priceOfGold < 0) priceOfGold = 0;
-    if (extraGoldValue < 0) extraGoldValue = 0;
+    let _priceOfGold = priceOfGold;
+    let _extraGoldValue = extraGoldValue;
+    if (_priceOfGold < 0) _priceOfGold = 0;
+    if (_extraGoldValue < 0) _extraGoldValue = 0;
 
     const laborCost = weight * laborRate;
 
-    let subtotal = priceOfGold - extraGoldValue + laborCost;
+    let subtotal = _priceOfGold - _extraGoldValue + laborCost;
     if (subtotal < 0) subtotal = 0;
 
     const tax = taxable ? subtotal * TAX_RATE : 0;
     const total = subtotal + tax;
 
     // Screen totals
-    priceGoldEl.textContent = fmtMoney(priceOfGold);
-    extraValueEl.textContent = fmtMoney(extraGoldValue);
+    priceGoldEl.textContent = fmtMoney(_priceOfGold);
+    extraValueEl.textContent = fmtMoney(_extraGoldValue);
     laborCostEl.textContent = fmtMoney(laborCost);
     subtotalEl.textContent = fmtMoney(subtotal);
     taxEl.textContent = fmtMoney(tax);
     totalEl.textContent = fmtMoney(total);
 
-    // Print values
-    pFinalWeight.textContent = weight.toFixed(3);
-    pFinalKarat.textContent = karat;
-    pScrap10.textContent = scrap10.toFixed(3);
-    pScrap14.textContent = scrap14.toFixed(3);
-    pPriceGold.textContent = fmtMoney(priceOfGold);
-    pExtraValue.textContent = fmtMoney(extraGoldValue);
-    pLaborCost.textContent = fmtMoney(laborCost);
-    pSubtotal.textContent = fmtMoney(subtotal);
-    pTax.textContent = fmtMoney(tax);
-    pTotal.textContent = fmtMoney(total);
+    // Print layout values
+    pFinalWeightEl.textContent = weight.toFixed(3);
+    pFinalKaratEl.textContent = karat;
+    pScrap10El.textContent = scrap10.toFixed(3);
+    pScrap14El.textContent = scrap14.toFixed(3);
+    pPriceGoldEl.textContent = fmtMoney(_priceOfGold);
+    pExtraValueEl.textContent = fmtMoney(_extraGoldValue);
+    pLaborCostEl.textContent = fmtMoney(laborCost);
+    pSubtotalEl.textContent = fmtMoney(subtotal);
+    pTaxEl.textContent = fmtMoney(tax);
+    pTotalEl.textContent = fmtMoney(total);
 
     saveState();
   }
@@ -608,8 +640,22 @@
   [spotEl, laborEl, lossEl, karatEl, weightEl, scrap10El, scrap14El, taxableEl]
     .forEach(input => input.addEventListener("change", recalc));
 
+  // Password protect spot price editing
+  if (unlockBtnEl) {
+    unlockBtnEl.addEventListener("click", () => {
+      const pw = prompt("Manager: enter password to edit gold price:");
+      if (pw === ADMIN_PASSWORD) {
+        spotEl.readOnly = false;
+        spotEl.focus();
+      } else if (pw !== null) {
+        alert("Incorrect password.");
+      }
+    });
+  }
+
   // INIT
   loadState();
+  updateDateMeta();
   recalc();
 </script>
 </body>
