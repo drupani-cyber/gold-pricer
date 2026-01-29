@@ -249,7 +249,7 @@
       <div>
         <label for="spot">24K Spot Price (USD / oz)</label>
         <input id="spot" type="number" step="0.01" value="4100">
-        <div class="muted" style="margin-top:4px;">Set once per day as needed.</div>
+        <div class="muted" style="margin-top:4px;">Auto-fills with current market price + $25 (edit if needed).</div>
       </div>
       <div>
         <label for="labor">Labor $/g (editable)</label>
@@ -406,6 +406,7 @@
   const PURITY_10 = 10 / 24;
   const PURITY_14 = 14 / 24;
   const TAX_RATE = 0.0825;
+  const MARKET_PRICE_BUMP = 25;
 
   const el = id => document.getElementById(id);
 
@@ -439,6 +440,8 @@
   const pDateEl        = el("pDate");
   const screenMetaEl   = el("screenMeta");
 
+  let spotWasManual = false;
+
   function num(v) {
     const n = parseFloat(v);
     return isNaN(n) ? 0 : n;
@@ -448,6 +451,52 @@
     const sign = x < 0 ? "-" : "";
     const val = Math.abs(x).toFixed(2);
     return sign + "$" + val;
+  }
+
+  async function fetchSpotPrice() {
+    const sources = [
+      {
+        url: "https://api.metals.live/v1/spot/gold",
+        parse(data) {
+          if (!Array.isArray(data) || !data.length || !Array.isArray(data[0])) return null;
+          const price = parseFloat(data[0][1]);
+          return isNaN(price) ? null : price;
+        }
+      },
+      {
+        url: "https://data-asg.goldprice.org/dbXRates/USD",
+        parse(data) {
+          if (!data || !data.items || !data.items.length) return null;
+          const price = parseFloat(data.items[0].xauPrice);
+          return isNaN(price) ? null : price;
+        }
+      }
+    ];
+
+    for (let i = 0; i < sources.length; i++) {
+      const source = sources[i];
+      try {
+        const res = await fetch(source.url, { cache: "no-store" });
+        if (!res.ok) continue;
+        const data = await res.json();
+        const price = source.parse(data);
+        if (typeof price === "number" && isFinite(price) && price > 0) {
+          return price;
+        }
+      } catch (err) {
+        // try next source
+      }
+    }
+    return null;
+  }
+
+  async function setSpotFromMarket() {
+    if (spotWasManual) return false;
+    const marketPrice = await fetchSpotPrice();
+    if (spotWasManual || !marketPrice) return false;
+    const bumped = marketPrice + MARKET_PRICE_BUMP;
+    spotEl.value = bumped.toFixed(2);
+    return true;
   }
 
   function saveState() {
@@ -595,14 +644,22 @@
   document.getElementById("btnClear").addEventListener("click", clearAll);
   document.getElementById("btnPrint").addEventListener("click", doPrint);
   document.getElementById("btnPdf").addEventListener("click", doPdf);
+  spotEl.addEventListener("input", () => {
+    spotWasManual = true;
+  });
 
   [spotEl, laborEl, lossEl, karatEl, weightEl, scrap10El, scrap14El, taxableEl]
     .forEach(input => input.addEventListener("change", recalc));
 
   // INIT
-  loadState();
-  updateDateMeta();
-  recalc();
+  async function init() {
+    loadState();
+    updateDateMeta();
+    await setSpotFromMarket();
+    recalc();
+  }
+
+  init();
 </script>
 </body>
 </html>
