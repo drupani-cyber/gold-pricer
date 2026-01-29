@@ -249,7 +249,7 @@
       <div>
         <label for="spot">24K Spot Price (USD / oz)</label>
         <input id="spot" type="number" step="0.01" value="4100">
-        <div class="muted" style="margin-top:4px;">Set once per day as needed.</div>
+        <div class="muted" id="spotMeta" style="margin-top:4px;">Auto-fills with current market price + $25.</div>
       </div>
       <div>
         <label for="labor">Labor $/g (editable)</label>
@@ -406,6 +406,9 @@
   const PURITY_10 = 10 / 24;
   const PURITY_14 = 14 / 24;
   const TAX_RATE = 0.0825;
+  const AUTO_SPOT_MARKUP = 25;
+  const LBMA_PROXY_URL =
+    "https://script.google.com/macros/s/AKfycbxHeYXbe1eIG-_TtlxHTuz4tlaEtqHlhX26bdCcW-vt1UMSZ31lfC3cqPdHv5UEwg2Q/exec";
 
   const el = id => document.getElementById(id);
 
@@ -418,6 +421,7 @@
   const scrap14El  = el("scrap14");
   const taxableEl  = el("taxable");
   const autosaveEl = el("autosave");
+  const spotMetaEl = el("spotMeta");
 
   const priceGoldEl  = el("priceGold");
   const extraValueEl = el("extraValue");
@@ -491,6 +495,36 @@
     if (screenMetaEl) {
       screenMetaEl.textContent =
         "Date: " + dateStr + " · Quote valid for 7 days · Visit us at www.thegoldtreasure.com";
+    }
+  }
+
+  async function fetchAutoSpot() {
+    if (!spotMetaEl) return;
+    spotMetaEl.textContent = "Fetching current spot...";
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const res = await fetch(LBMA_PROXY_URL, {
+        cache: "no-cache",
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      const basePrice =
+        typeof data.pm === "number"
+          ? data.pm
+          : (typeof data.price === "number" ? data.price : null);
+      if (typeof basePrice !== "number") throw new Error("Missing price");
+      const autoSpot = basePrice + AUTO_SPOT_MARKUP;
+      spotEl.value = autoSpot.toFixed(2);
+      const sourceLabel = typeof data.pm === "number" ? "LBMA PM" : "market";
+      const dateLabel = data.date ? " (" + data.date + ")" : "";
+      spotMetaEl.textContent =
+        "Auto spot: " + sourceLabel + " + $" + AUTO_SPOT_MARKUP + dateLabel;
+      recalc();
+    } catch (err) {
+      spotMetaEl.textContent = "Auto spot unavailable. Enter spot manually.";
     }
   }
 
@@ -602,6 +636,7 @@
   // INIT
   loadState();
   updateDateMeta();
+  fetchAutoSpot();
   recalc();
 </script>
 </body>
