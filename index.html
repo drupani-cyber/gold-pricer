@@ -83,6 +83,11 @@
       font-family: var(--font);
     }
 
+    input[type="number"].disabled {
+      background: #f1f5f9;
+      color: #64748b;
+    }
+
     input[type="number"]:focus, select:focus {
       outline: 2px solid var(--blue);
       border-color: var(--blue);
@@ -136,6 +141,10 @@
     .pill.ok {
       background: #dcfce7;
       color: #166534;
+    }
+    .pill.neutral {
+      background: #e2e8f0;
+      color: #475569;
     }
     .pill.err {
       background: #fee2e2;
@@ -249,7 +258,12 @@
       <div>
         <label for="spot">24K Spot Price (USD / oz)</label>
         <input id="spot" type="number" step="0.01" value="4100">
-        <div class="muted" style="margin-top:4px;">Set once per day as needed.</div>
+        <div class="row" style="margin-top:6px; flex-wrap: wrap;">
+          <input type="checkbox" id="autoSpot" checked>
+          <label for="autoSpot" style="margin:0; display:inline;">Auto spot (LBMA PM + $25)</label>
+          <span id="spotStatus" class="pill ok" style="display:none;"></span>
+        </div>
+        <div class="muted" style="margin-top:4px;">Auto-updated from market; toggle off to edit.</div>
       </div>
       <div>
         <label for="labor">Labor $/g (editable)</label>
@@ -406,10 +420,15 @@
   const PURITY_10 = 10 / 24;
   const PURITY_14 = 14 / 24;
   const TAX_RATE = 0.0825;
+  const LBMA_PROXY_URL =
+    "https://script.google.com/macros/s/AKfycbxHeYXbe1eIG-_TtlxHTuz4tlaEtqHlhX26bdCcW-vt1UMSZ31lfC3cqPdHv5UEwg2Q/exec";
+  const AUTO_SPOT_MARKUP = 25;
+  const AUTO_SPOT_TIMEOUT_MS = 6000;
 
   const el = id => document.getElementById(id);
 
   const spotEl     = el("spot");
+  const autoSpotEl = el("autoSpot");
   const laborEl    = el("labor");
   const lossEl     = el("loss");
   const karatEl    = el("karat");
@@ -418,6 +437,7 @@
   const scrap14El  = el("scrap14");
   const taxableEl  = el("taxable");
   const autosaveEl = el("autosave");
+  const spotStatusEl = el("spotStatus");
 
   const priceGoldEl  = el("priceGold");
   const extraValueEl = el("extraValue");
@@ -454,6 +474,7 @@
     if (!autosaveEl.checked) return;
     const state = {
       spot: spotEl.value,
+      autoSpot: autoSpotEl ? autoSpotEl.checked : true,
       labor: laborEl.value,
       loss: lossEl.value,
       karat: karatEl.value,
@@ -473,6 +494,7 @@
       if (!txt) return;
       const s = JSON.parse(txt);
       if ("spot" in s) spotEl.value = s.spot;
+      if ("autoSpot" in s && autoSpotEl) autoSpotEl.checked = s.autoSpot;
       if ("labor" in s) laborEl.value = s.labor;
       if ("loss" in s) lossEl.value = s.loss;
       if ("karat" in s) karatEl.value = s.karat;
@@ -492,6 +514,88 @@
       screenMetaEl.textContent =
         "Date: " + dateStr + " · Quote valid for 7 days · Visit us at www.thegoldtreasure.com";
     }
+  }
+
+  function spotCacheKey() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return "lbma_cache_" + y + "-" + m + "-" + day;
+  }
+
+  function setSpotStatus(message, className) {
+    if (!spotStatusEl) return;
+    spotStatusEl.textContent = message;
+    spotStatusEl.className = className;
+    spotStatusEl.style.display = "inline-flex";
+  }
+
+  function setSpotAuto(message) {
+    spotEl.readOnly = true;
+    spotEl.classList.add("disabled");
+    setSpotStatus(message || "Auto spot ready", "pill ok");
+  }
+
+  function setSpotManual(message, isError) {
+    spotEl.readOnly = false;
+    spotEl.classList.remove("disabled");
+    setSpotStatus(message || "Manual", isError ? "pill err" : "pill neutral");
+  }
+
+  async function initAutoSpot() {
+    if (!autoSpotEl) return;
+    if (!autoSpotEl.checked) {
+      setSpotManual("Manual", false);
+      return;
+    }
+
+    setSpotAuto("Fetching...");
+
+    try {
+      const cached = JSON.parse(localStorage.getItem(spotCacheKey()) || "null");
+      if (cached && typeof cached.pm === "number") {
+        const spotValue = cached.pm + AUTO_SPOT_MARKUP;
+        spotEl.value = spotValue.toFixed(2);
+        const dateLabel = cached.date ? " (" + cached.date + ")" : "";
+        setSpotAuto(
+          "LBMA PM " +
+            Number(cached.pm).toFixed(2) +
+            " + $" +
+            AUTO_SPOT_MARKUP +
+            dateLabel
+        );
+        recalc();
+        return;
+      }
+    } catch (e) {}
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), AUTO_SPOT_TIMEOUT_MS);
+      const r = await fetch(LBMA_PROXY_URL, { cache: "no-cache", signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const j = await r.json();
+      if (typeof j.pm === "number") {
+        const spotValue = j.pm + AUTO_SPOT_MARKUP;
+        spotEl.value = spotValue.toFixed(2);
+        localStorage.setItem(spotCacheKey(), JSON.stringify(j));
+        const dateLabel = j.date ? " (" + j.date + ")" : "";
+        setSpotAuto(
+          "LBMA PM " +
+            Number(j.pm).toFixed(2) +
+            " + $" +
+            AUTO_SPOT_MARKUP +
+            dateLabel
+        );
+        recalc();
+        return;
+      }
+    } catch (e) {}
+
+    autoSpotEl.checked = false;
+    setSpotManual("Auto failed", true);
   }
 
   function recalc() {
@@ -598,10 +702,12 @@
 
   [spotEl, laborEl, lossEl, karatEl, weightEl, scrap10El, scrap14El, taxableEl]
     .forEach(input => input.addEventListener("change", recalc));
+  if (autoSpotEl) autoSpotEl.addEventListener("change", initAutoSpot);
 
   // INIT
   loadState();
   updateDateMeta();
+  initAutoSpot();
   recalc();
 </script>
 </body>
