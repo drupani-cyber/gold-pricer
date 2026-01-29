@@ -249,7 +249,7 @@
       <div>
         <label for="spot">24K Spot Price (USD / oz)</label>
         <input id="spot" type="number" step="0.01" value="4100">
-        <div class="muted" style="margin-top:4px;">Set once per day as needed.</div>
+        <div class="muted" style="margin-top:4px;">Auto-updated on load (market + $25). Edit if needed.</div>
       </div>
       <div>
         <label for="labor">Labor $/g (editable)</label>
@@ -406,6 +406,11 @@
   const PURITY_10 = 10 / 24;
   const PURITY_14 = 14 / 24;
   const TAX_RATE = 0.0825;
+  const SPOT_MARKUP = 25;
+  const SPOT_SOURCES = [
+    { url: "https://api.metals.live/v1/spot", parser: parseMetalsLiveSpot },
+    { url: "https://data-asg.goldprice.org/dbXRates/USD", parser: parseGoldPriceSpot }
+  ];
 
   const el = id => document.getElementById(id);
 
@@ -448,6 +453,61 @@
     const sign = x < 0 ? "-" : "";
     const val = Math.abs(x).toFixed(2);
     return sign + "$" + val;
+  }
+
+  function parseMetalsLiveSpot(data) {
+    if (!data) return null;
+    if (Array.isArray(data)) {
+      for (const entry of data) {
+        if (entry && typeof entry === "object" && typeof entry.gold === "number") {
+          return entry.gold;
+        }
+        if (Array.isArray(entry) && typeof entry[1] === "number") {
+          return entry[1];
+        }
+      }
+      return null;
+    }
+    if (typeof data === "object" && typeof data.gold === "number") {
+      return data.gold;
+    }
+    return null;
+  }
+
+  function parseGoldPriceSpot(data) {
+    if (!data || !Array.isArray(data.items) || !data.items.length) return null;
+    const item = data.items[0];
+    if (item && typeof item.xauPrice === "number") {
+      return item.xauPrice;
+    }
+    return null;
+  }
+
+  async function fetchSpotPrice() {
+    for (const source of SPOT_SOURCES) {
+      try {
+        const res = await fetch(source.url, { cache: "no-cache" });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        const price = source.parser(data);
+        if (typeof price === "number" && isFinite(price)) {
+          return price;
+        }
+      } catch (e) {
+        // Try next source.
+      }
+    }
+    return null;
+  }
+
+  async function updateSpotFromMarket() {
+    const startValue = spotEl.value;
+    const spot = await fetchSpotPrice();
+    if (spot === null) return;
+    if (spotEl.value !== startValue) return;
+    const adjusted = spot + SPOT_MARKUP;
+    spotEl.value = adjusted.toFixed(2);
+    recalc();
   }
 
   function saveState() {
@@ -602,6 +662,7 @@
   // INIT
   loadState();
   updateDateMeta();
+  updateSpotFromMarket();
   recalc();
 </script>
 </body>
